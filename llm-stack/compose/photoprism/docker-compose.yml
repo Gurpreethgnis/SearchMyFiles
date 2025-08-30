@@ -1,0 +1,29 @@
+version: "3.8"
+services:
+  photoprism:
+    image: photoprism/photoprism:latest
+    ports:
+      - "2342:2342"
+    environment:
+      - PHOTOPRISM_ADMIN_PASSWORD=${PHOTOPRISM_ADMIN_PASSWORD}
+      - PHOTOPRISM_HTTP_PORT=2342
+      - PHOTOPRISM_SITE_URL=http://localhost:2342/
+      - PHOTOPRISM_WORKERS=2
+      - PHOTOPRISM_DISABLE_WEBDAV=true
+      - PHOTOPRISM_ORIGINALS_PATH=/photoprism/originals
+      - PHOTOPRISM_STORAGE_PATH=/photoprism/storage
+      - PHOTOPRISM_VISION_URL=http://vision:2343
+    volumes:
+      - C:\Ideas\SearchMyFiles\llm-stack\data\photoprism\originals:/photoprism/originals
+      - C:\Ideas\SearchMyFiles\llm-stack\data\photoprism\storage:/photoprism/storage
+    restart: unless-stopped
+    container_name: photoprism
+
+  vision:
+    image: photoprism/vision-describe:latest
+    environment:
+      - VISION_HTTP_PORT=2343
+    ports:
+      - "2343:2343"
+    restart: unless-stopped
+    container_name: photoprism-vision

@@ -1,0 +1,62 @@
+version: "3.8"
+services:
+  broker:
+    image: redis:7
+    restart: unless-stopped
+    container_name: paperless-redis
+
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=paperless
+      - POSTGRES_USER=paperless
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - C:\Ideas\SearchMyFiles\llm-stack\data\paperless\db:/var/lib/postgresql/data
+    restart: unless-stopped
+    container_name: paperless-postgres
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+    container_name: paperless-gotenberg
+
+  tika:
+    image: apache/tika:2.9.2
+    restart: unless-stopped
+    container_name: paperless-tika
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    depends_on: [broker, db, gotenberg, tika]
+    ports:
+      - "8000:8000"
+    environment:
+      - PAPERLESS_REDIS=redis://broker:6379
+      - PAPERLESS_DBHOST=db
+      - PAPERLESS_TIKA_ENABLED=1
+      - PAPERLESS_TIKA_GOTENBERG_ENDPOINT=http://gotenberg:3000
+      - PAPERLESS_TIKA_ENDPOINT=http://tika:9998
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY}
+      - PAPERLESS_URL=http://localhost:8000
+      - PAPERLESS_TIME_ZONE=America/New_York
+      - PAPERLESS_CONSUMER_POLLING=10
+      - PAPERLESS_CONSUMER_DELETE_DUPLICATES=true
+    volumes:
+      - C:\Ideas\SearchMyFiles\llm-stack\data\paperless\consume:/usr/src/paperless/consume
+      - C:\Ideas\SearchMyFiles\llm-stack\data\paperless\export:/usr/src/paperless/export
+      - C:\Ideas\SearchMyFiles\llm-stack\data\paperless\media:/usr/src/paperless/media
+      - C:\Ideas\SearchMyFiles\llm-stack\data\paperless\data:/usr/src/paperless/data
+    restart: unless-stopped
+    container_name: paperless-ngx
+
+  paperless-gpt:
+    image: ghcr.io/icereed/paperless-gpt:latest
+    depends_on: [paperless]
+    environment:
+      - PAPERLESS_URL=http://paperless:8000
+      - PAPERLESS_TOKEN=${PAPERLESS_API_TOKEN}
+      - OCR_PROCESS_MODE=image
+      - PAPERLESS_GPT_LOG_LEVEL=INFO
+    restart: unless-stopped
+    container_name: paperless-gpt

@@ -1,0 +1,56 @@
+# RAG Configuration for LLM Stack
+# Configuration for document and photo vector indexing and querying
+
+paths:
+  paperless_jsonl: "exports/paperless/paperless-export.jsonl"
+  photoprism_jsonl: "exports/photoprism/photoprism-export.jsonl"
+  vectors_dir: "data/vectors"
+  cache_dir: "data/cache"
+
+device: "cuda"  # Change to "cpu" if no GPU available
+
+batch_size: 64
+
+text_embedding_model:
+  name: "sentence-transformers/all-MiniLM-L6-v2"
+  normalize: true
+  max_chars: 12000
+
+image_embedding_model:
+  name: "ViT-B-16"
+  pretrained: "openai"
+  use_thumbnails: true
+  thumbnail_key: "thumb_path"
+
+vector_store:
+  backend: "chroma"
+  collection: "docs_photos_v1"
+  persist_directory: "data/vectors/chroma"
+
+schema:
+  paperless_required: ["id", "title", "path", "full_text_path"]
+  photoprism_required: ["id", "file_path", "caption"]
+
+synthesis:
+  enabled: true
+  provider: "ollama"
+  model: "llama3.1:8b"
+  max_tokens: 256
+  temperature: 0.1
+
+retrieval:
+  top_k: 8
+  re_rank: false
+  similarity_threshold: 0.7
+
+logging:
+  level: "INFO"
+  log_file: "logs/rag.log"
+  max_file_size: "10MB"
+  backup_count: 5
+
+performance:
+  chunk_size: 800
+  chunk_overlap: 100
+  max_workers: 4
+  use_gpu_memory_fraction: 0.8

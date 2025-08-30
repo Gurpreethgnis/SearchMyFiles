@@ -1,0 +1,372 @@
+4-STEP INSTRUCTION MANUAL — Documents + Photos UI Pipeline (Windows 11, RTX 5070)
+Version: 1.0
+Owner: <your name>
+Repo: llm-stack
+
+GOAL
+Build a plug-and-play local system to ingest and organize PDFs (with OCR) and Photos (with captions), expose a friendly UI for each, export normalized metadata + text, and construct a Llama‑ready RAG index (retrieval with optional synthesis).
+
+OVERVIEW OF THE 4 STEPS
+1) Environment & Repo Setup
+2) Ingestion UIs (Paperless‑ngx + Paperless‑GPT; PhotoPrism + Vision captions)
+3) Export Layer (RAG‑ready JSONL + plain text / thumbnails)
+4) RAG Index (embeddings + query, optional Llama synthesis)
+
+— — — — — — — — — — — — — — — — — — — — — — — — —
+
+STEP 1 — ENVIRONMENT & REPO SETUP
+Target: Windows 11 (WSL2), Docker Desktop, Python 3.10+
+
+A. Prerequisites
+- Windows 11 with WSL2 enabled
+- Docker Desktop (use WSL2 backend, default settings)
+- PowerShell 7+ recommended
+- Disk space: 50 GB free minimum
+- GPU: RTX 5070 (optional for later acceleration)
+
+B. Directory Layout (create this in C:\llm-stack)
+C:\llm-stack\
+  compose\
+    paperless\
+      docker-compose.yml
+      .env.example
+      README.md
+    photoprism\
+      docker-compose.yml
+      .env.example
+      README.md
+  scripts\
+    smoke\
+      paperless.ps1
+      photoprism.ps1
+    tests\
+      check-prereqs.ps1
+      check-folders.ps1
+      paperless-api.ps1
+      vision-caption.ps1
+      validate-exports.ps1
+    export\
+      paperless-export.ps1
+      photoprism-export.ps1
+    rag\
+      build_index.py
+      query.py
+      eval_retrieval.py
+      common.py
+  exports\
+    paperless\
+    photoprism\
+  data\
+    vectors\
+    cache\
+  config\
+    rag.yaml
+  docs\
+    runbook.md
+    CHANGELOG.md
+
+C. Scripts to Create (content summarized below)
+- tests/check-prereqs.ps1: verify Docker, WSL2, disk space, free ports (8000, 2342, 2343)
+- tests/check-folders.ps1: create required folders in C:\llm-stack\...
+- smoke/paperless.ps1 and smoke/photoprism.ps1: compose up + curl endpoints
+
+D. Acceptance Criteria (Exit for Step 1)
+- All checks report OK
+- Folder tree exists
+- README placeholders created in compose subfolders
+
+— — — — — — — — — — — — — — — — — — — — — — — — —
+
+STEP 2 — INGESTION UIS (DOCS + PHOTOS)
+Goal: Launch two web UIs
+• Paperless‑ngx for PDFs with OCR via Gotenberg/Tika
+• Paperless‑GPT sidecar for titles/tags
+• PhotoPrism for photos; Vision “describe” sidecar for natural‑language captions, labels, faces
+
+A. Paperless‑ngx Compose (compose/paperless/docker-compose.yml)
+(Adjust windows paths to your environment; final credentials in .env)
+--- YAML (example) ---
+version: "3.8"
+services:
+  broker:
+    image: redis:7
+    restart: unless-stopped
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_DB=paperless
+      - POSTGRES_USER=paperless
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - C:\llm-stack\data\paperless\db:/var/lib/postgresql/data
+    restart: unless-stopped
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+  tika:
+    image: apache/tika:2.9.2
+    restart: unless-stopped
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    depends_on: [broker, db, gotenberg, tika]
+    ports:
+      - "8000:8000"
+    environment:
+      - PAPERLESS_REDIS=redis://broker:6379
+      - PAPERLESS_DBHOST=db
+      - PAPERLESS_TIKA_ENABLED=1
+      - PAPERLESS_TIKA_GOTENBERG_ENDPOINT=http://gotenberg:3000
+      - PAPERLESS_TIKA_ENDPOINT=http://tika:9998
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY}
+      - PAPERLESS_URL=http://localhost:8000
+      - PAPERLESS_TIME_ZONE=America/New_York
+    volumes:
+      - C:\llm-stack\data\paperless\consume:/usr/src/paperless/consume
+      - C:\llm-stack\data\paperless\export:/usr/src/paperless/export
+      - C:\llm-stack\data\paperless\media:/usr/src/paperless/media
+      - C:\llm-stack\data\paperless\data:/usr/src/paperless/data
+    restart: unless-stopped
+  paperless-gpt:
+    image: ghcr.io/icereed/paperless-gpt:latest
+    depends_on: [paperless]
+    environment:
+      - PAPERLESS_URL=http://paperless:8000
+      - PAPERLESS_TOKEN=${PAPERLESS_API_TOKEN}
+      - OCR_PROCESS_MODE=image
+    restart: unless-stopped
+--- end YAML ---
+
+B. PhotoPrism + Vision Compose (compose/photoprism/docker-compose.yml)
+(Adjust paths; you can add GPU runtime later)
+--- YAML (example) ---
+version: "3.8"
+services:
+  photoprism:
+    image: photoprism/photoprism:latest
+    ports:
+      - "2342:2342"
+    environment:
+      - PHOTOPRISM_ADMIN_PASSWORD=${PHOTOPRISM_ADMIN_PASSWORD}
+      - PHOTOPRISM_HTTP_PORT=2342
+      - PHOTOPRISM_SITE_URL=http://localhost:2342/
+      - PHOTOPRISM_WORKERS=2
+      - PHOTOPRISM_DISABLE_WEBDAV=true
+      - PHOTOPRISM_ORIGINALS_PATH=/photoprism/originals
+      - PHOTOPRISM_STORAGE_PATH=/photoprism/storage
+      - PHOTOPRISM_VISION_URL=http://vision:2343
+    volumes:
+      - C:\llm-stack\data\photoprism\originals:/photoprism/originals
+      - C:\llm-stack\data\photoprism\storage:/photoprism/storage
+    restart: unless-stopped
+
+  vision:
+    image: photoprism/vision-describe:latest
+    environment:
+      - VISION_HTTP_PORT=2343
+    ports:
+      - "2343:2343"
+    restart: unless-stopped
+--- end YAML ---
+
+C. Bring Up & Initial Tests
+- PowerShell: cd C:\llm-stack\compose\paperless && docker compose up -d
+- Open http://localhost:8000 → create admin; set consume/export folders
+- Drop 3 PDFs into consume/: text-only, scanned-only, mixed
+- Confirm: all appear; text is searchable; Paperless‑GPT assigns reasonable title/tag
+
+- PowerShell: cd C:\llm-stack\compose\photoprism && docker compose up -d
+- Open http://localhost:2342 → initial setup
+- Add 5 sample photos to originals/; wait for indexing
+- Confirm: captions (from Vision) + labels + faces appear in UI
+
+D. Automated Smoke Scripts (examples)
+scripts/smoke/paperless.ps1
+  docker compose -f C:\llm-stack\compose\paperless\docker-compose.yml up -d
+  Invoke-WebRequest http://localhost:8000/ -TimeoutSec 120
+
+scripts/smoke/photoprism.ps1
+  docker compose -f C:\llm-stack\compose\photoprism\docker-compose.yml up -d
+  Invoke-WebRequest http://localhost:2342/ -TimeoutSec 120
+
+E. Exit Criteria (Step 2)
+- Paperless UI reachable, OCR working
+- PhotoPrism UI reachable, captions+labels present
+- Sidecars healthy and writing results
+
+— — — — — — — — — — — — — — — — — — — — — — — — —
+
+STEP 3 — EXPORT LAYER (RAG‑READY DATA)
+Goal: Normalize outputs into JSONL + assets for indexing.
+
+A. Paperless Export Script (scripts/export/paperless-export.ps1)
+- Input: Paperless API
+- Output files in exports/paperless/:
+  - paperless-export.jsonl (one JSON per line)
+  - full text per doc at exports/paperless/<id>.txt
+- JSON schema per record:
+  {
+    "id": "...",
+    "title": "...",
+    "tags": ["..."],
+    "created": "YYYY-MM-DD",
+    "path": "C:\\...\\media\\...pdf",
+    "full_text_path": "C:\\llm-stack\\exports\\paperless\\<id>.txt",
+    "text_excerpt": "first 1000 chars"
+  }
+- Functional notes:
+  - Export plain text via Paperless text endpoint or by reading OCR text if available
+  - Skip zero-byte files with warning; continue
+
+B. PhotoPrism Export Script (scripts/export/photoprism-export.ps1)
+- Input: PhotoPrism API or DB
+- Output files in exports/photoprism/:
+  - photoprism-export.jsonl
+  - thumbnails in exports/photoprism/thumbs/<id>.jpg
+- JSON schema per record:
+  {
+    "id": "...",
+    "file_path": "C:\\...\\originals\\...jpg",
+    "caption": "...",
+    "labels": ["..."],
+    "people": ["..."],
+    "exif": {"make":"...", "model":"...", "dt_original":"..."},
+    "thumb_path": "C:\\llm-stack\\exports\\photoprism\\thumbs\\<id>.jpg"
+  }
+
+C. Validators (scripts/tests/validate-exports.ps1)
+- Ensure required keys exist per schema
+- Validate Windows paths and non-zero file sizes
+- Count totals and print a summary
+
+D. Manual Spot Checks
+- Open a few exported .txt files; search for a known keyword
+- Confirm JSONL records match a random selection from the UIs
+
+E. Exit Criteria (Step 3)
+- JSONL files exist and pass validation
+- 100% of sampled items contain required fields
+- Plain text and thumbnails are readable
+
+— — — — — — — — — — — — — — — — — — — — — — — — —
+
+STEP 4 — BUILD & QUERY RAG INDEX (LLAMA‑READY)
+Goal: Create embeddings over doc text and photo captions (optional image embeddings), store in local vector DB, and query with optional Llama synthesis.
+
+A. Python Environment
+- Create venv and install packages (agent may choose exact versions)
+- Recommended: chromadb or faiss-cpu, sentence-transformers, open-clip-torch, torch, pyyaml, pandas, tqdm
+- Optional for synthesis: llama-index and ollama client
+
+B. Config File (config/rag.yaml)
+paths:
+  paperless_jsonl: "exports/paperless/paperless-export.jsonl"
+  photoprism_jsonl: "exports/photoprism/photoprism-export.jsonl"
+  vectors_dir: "data/vectors"
+  cache_dir: "data/cache"
+device: "cuda"
+batch_size: 64
+text_embedding_model:
+  name: "sentence-transformers/all-MiniLM-L6-v2"
+  normalize: true
+  max_chars: 12000
+image_embedding_model:
+  name: "ViT-B-16"
+  pretrained: "openai"
+  use_thumbnails: true
+  thumbnail_key: "thumb_path"
+vector_store:
+  backend: "chroma"
+  collection: "docs_photos_v1"
+schema:
+  paperless_required: ["id","title","path","full_text_path"]
+  photoprism_required: ["id","file_path","caption"]
+synthesis:
+  enabled: true
+  provider: "ollama"
+  model: "llama3.1:8b"
+  max_tokens: 256
+  temperature: 0.1
+retrieval:
+  top_k: 8
+  re_rank: false
+
+C. Build Index Script (scripts/rag/build_index.py) — Key Requirements
+- Load config; validate required keys
+- Read JSONL exports
+- For Paperless docs:
+  - Read OCR text from full_text_path; truncate to max_chars; clean control chars
+  - Embed via sentence-transformers; store vectors and metadata (source, id, title, path, tags)
+- For Photos:
+  - Compose caption text (caption + top labels + a few EXIF fields)
+  - Embed and store with metadata (source, id, file_path, people, labels)
+- Optional Image Embeddings:
+  - Load thumbnails; compute CLIP embeddings; store in second collection
+- Idempotency: upsert by unique id (doc::<id>, photo::<id>)
+- At end, write build_report.json with counts, dims, and timing
+
+D. Query Script (scripts/rag/query.py) — Key Requirements
+- CLI args: --q, --k, --type (doc|photo|both), --modality (text|image|both), --synthesize (yes|no)
+- Retrieve top‑k by cosine similarity; merge modalities if enabled
+- Print ranked results: score, type, title/file, path, short snippet
+- If synthesis on:
+  - Build a concise prompt with top‑k snippets
+  - Call local Llama (Ollama) and print answer + source paths
+
+E. Evaluation (scripts/rag/eval_retrieval.py)
+- Define two smoke tests:
+  1) keyword in a test PDF → returned in top‑3
+  2) concept in a photo caption (e.g., “sunset beach”) → top‑5 contains a photo
+- Optional toy labeled queries: compute hit‑rate@3 and @5
+- Log P95 latency for retrieval; warn if > 1s on GPU
+
+F. Manual Tests
+- Run query for a known invoice term (docs) and a visual concept (photos)
+- Try synthesis on: should return a concise paragraph and cite source paths
+
+G. Exit Criteria (Step 4)
+- build_index.py completes; non‑zero counts for docs and photos
+- query.py returns relevant results for both modalities
+- eval script passes smoke tests; latency within budget
+
+— — — — — — — — — — — — — — — — — — — — — — — — —
+
+APPENDIX A — SAMPLE TEST SCRIPTS (SKELETONS)
+
+tests/check-prereqs.ps1
+  Write-Host "Checking Docker Desktop, WSL2, disk space, and ports..."
+  # Implement: Check docker version; Test-NetConnection ports; Get-PSDrive for free space
+
+tests/check-folders.ps1
+  $paths = @(
+    "C:\llm-stack\data\paperless\consume",
+    "C:\llm-stack\data\paperless\export",
+    "C:\llm-stack\data\paperless\media",
+    "C:\llm-stack\data\paperless\data",
+    "C:\llm-stack\data\photoprism\originals",
+    "C:\llm-stack\data\photoprism\storage",
+    "C:\llm-stack\exports\paperless",
+    "C:\llm-stack\exports\photoprism",
+    "C:\llm-stack\data\vectors",
+    "C:\llm-stack\data\cache"
+  )
+  foreach ($p in $paths) { if (!(Test-Path $p)) { New-Item -ItemType Directory -Force -Path $p | Out-Null } }
+  Write-Host "Folders verified."
+
+tests/paperless-api.ps1
+  Invoke-WebRequest http://localhost:8000/ -TimeoutSec 60
+
+tests/vision-caption.ps1
+  Invoke-WebRequest http://localhost:2342/ -TimeoutSec 60
+  Invoke-WebRequest http://localhost:2343/ -TimeoutSec 60
+
+tests/validate-exports.ps1
+  # Validate JSONL schemas and file paths; print counts and first/last IDs
+
+APPENDIX B — RAG IMPLEMENTATION NOTES
+- Start with all‑MiniLM for speed, upgrade to bge-base later
+- Chunk long PDFs into ~800‑token windows with overlap if retrieval suffers
+- Keep destructive actions in “dry‑run” modes by default (for any future organizer)
+- Ensure every script writes a summary line and a detailed log under ./logs/
+
+END OF DOCUMENT
+
