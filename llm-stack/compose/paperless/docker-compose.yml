@@ -22,7 +22,7 @@ services:
     container_name: paperless-gotenberg
 
   tika:
-    image: apache/tika:2.9.2
+    image: apache/tika:latest
     restart: unless-stopped
     container_name: paperless-tika
 
@@ -30,15 +30,18 @@ services:
     image: ghcr.io/paperless-ngx/paperless-ngx:latest
     depends_on: [broker, db, gotenberg, tika]
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8321:8000"
     environment:
       - PAPERLESS_REDIS=redis://broker:6379
       - PAPERLESS_DBHOST=db
+      - PAPERLESS_DBNAME=paperless
+      - PAPERLESS_DBUSER=paperless
+      - PAPERLESS_DBPASS=${POSTGRES_PASSWORD}
       - PAPERLESS_TIKA_ENABLED=1
       - PAPERLESS_TIKA_GOTENBERG_ENDPOINT=http://gotenberg:3000
       - PAPERLESS_TIKA_ENDPOINT=http://tika:9998
       - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY}
-      - PAPERLESS_URL=http://localhost:8000
+      - PAPERLESS_URL=http://localhost:8321
       - PAPERLESS_TIME_ZONE=America/New_York
       - PAPERLESS_CONSUMER_POLLING=10
       - PAPERLESS_CONSUMER_DELETE_DUPLICATES=true
@@ -54,7 +57,7 @@ services:
     image: ghcr.io/icereed/paperless-gpt:latest
     depends_on: [paperless]
     environment:
-      - PAPERLESS_URL=http://paperless:8000
+      - PAPERLESS_BASE_URL=http://paperless:8000
       - PAPERLESS_TOKEN=${PAPERLESS_API_TOKEN}
       - OCR_PROCESS_MODE=image
       - PAPERLESS_GPT_LOG_LEVEL=INFO
