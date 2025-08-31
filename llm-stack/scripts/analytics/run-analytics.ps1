@@ -158,7 +158,7 @@ function Show-Status {
 
 function Show-Help {
     Write-Host ""
-    Write-Host "Usage: .\run-analytics.ps1 -Action <action> [options]" -ForegroundColor Yellow
+    Write-Host "Usage: .\run-analytics.ps1 -Action action [options]" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Actions:" -ForegroundColor Cyan
     Write-Host "  install-deps     Install Python dependencies" -ForegroundColor White

@@ -54,7 +54,11 @@ class LLMStackAnalytics:
                 self.index_stats = {}
             
             # Load original JSONL data if available
-            jsonl_files = list(self.index_dir.parent.parent / "export" / "exports").glob("*.jsonl")
+            export_dir = self.index_dir.parent.parent / "export" / "exports"
+            if export_dir.exists():
+                jsonl_files = list(export_dir.glob("*.jsonl"))
+            else:
+                jsonl_files = []
             if jsonl_files:
                 latest_file = max(jsonl_files, key=lambda x: x.stat().st_mtime)
                 logger.info(f"Loading data from: {latest_file}")
@@ -270,13 +274,13 @@ class LLMStackAnalytics:
             try:
                 self.documents_df['date'] = pd.to_datetime(self.documents_df['extracted_at'])
                 date_counts = self.documents_df['date'].dt.date.value_counts().sort_index()
-                trends["daily_volume"] = date_counts.to_dict()
+                trends["daily_volume"] = {str(k): int(v) for k, v in date_counts.to_dict().items()}
                 
                 # Weekly trends
                 weekly_counts = self.documents_df.groupby(
                     self.documents_df['date'].dt.isocalendar().week
                 ).size()
-                trends["weekly_volume"] = weekly_counts.to_dict()
+                trends["weekly_volume"] = {str(k): int(v) for k, v in weekly_counts.to_dict().items()}
                 
             except Exception as e:
                 logger.warning(f"Date analysis failed: {e}")
@@ -553,13 +557,13 @@ class LLMStackAnalytics:
         """Generate markdown summary of analytics"""
         summary = f"""# LLM Stack Analytics Report
 
-## 📊 Executive Summary
+## Executive Summary
 - **Total Documents**: {report['summary']['total_documents']}
 - **Data Sources**: {report['summary']['data_sources']}
 - **Document Types**: {report['summary']['document_types']}
 - **Analysis Date**: {report['summary']['analysis_date']}
 
-## 🔍 Key Insights
+## Key Insights
 
 ### Data Quality Metrics
 """
@@ -587,14 +591,14 @@ class LLMStackAnalytics:
                 summary += f"- {doc_type}: {count} documents\n"
         
         summary += f"""
-## 🚀 Recommendations
+## Recommendations
 """
         
         for rec in report.get('recommendations', []):
             summary += f"- {rec}\n"
         
         summary += f"""
-## 📁 Generated Files
+## Generated Files
 """
         
         for file in report.get('files_generated', []):
