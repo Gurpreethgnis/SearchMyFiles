@@ -1,0 +1,191 @@
+# LLM Stack Platform - Git Ignore Rules
+# Excludes personal data, model files, and large files
+
+# ========================================
+# PERSONAL DATA & USER CONTENT
+# ========================================
+# User documents and photos
+data/paperless/consume/*
+data/paperless/media/*
+data/photoprism/originals/*
+data/photoprism/storage/*
+data/photoprism/vision-models/*
+data/photoprism/vision-cache/*
+
+# Export data (may contain personal content)
+exports/*
+
+# ========================================
+# AI MODELS & CACHE FILES
+# ========================================
+# Vision AI models and cache
+data/photoprism/vision-models/
+data/photoprism/vision-cache/
+data/photoprism/vision-cache/hub/
+data/photoprism/vision-cache/hub/models--*/
+data/photoprism/vision-cache/hub/models--*/*/
+data/photoprism/vision-cache/hub/models--*/blobs/
+data/photoprism/vision-cache/hub/models--*/refs/
+data/photoprism/vision-cache/hub/models--*/snapshots/
+
+# Model file extensions
+*.bin
+*.safetensors
+*.ckpt
+*.pth
+*.onnx
+*.tflite
+*.model
+*.weights
+*.h5
+*.pb
+*.tflite
+*.mlmodel
+
+# Hugging Face cache and models
+.cache/
+cache/
+hf_cache/
+hub/
+models--*/
+**/models--*/
+**/blobs/
+**/refs/
+**/snapshots/
+**/hub/
+
+# ========================================
+# DATABASE FILES
+# ========================================
+# Database files (contain user data)
+data/paperless/db/
+data/photoprism/storage/*.db
+*.db
+*.sqlite
+*.sqlite3
+
+# ========================================
+# ENVIRONMENT & SECRETS
+# ========================================
+# Environment files with secrets
+.env
+.env.local
+.env.production
+.env.staging
+
+# API keys and tokens
+*.key
+*.pem
+*.p12
+*.pfx
+
+# ========================================
+# DOCKER & VOLUMES
+# ========================================
+# Docker volumes and data
+data/*/
+volumes/
+docker-volumes/
+
+# ========================================
+# LOGS & TEMPORARY FILES
+# ========================================
+# Log files
+*.log
+logs/
+log/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# ========================================
+# SYSTEM & IDE FILES
+# ========================================
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+.atom/
+
+# ========================================
+# PYTHON & NODE
+# ========================================
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ========================================
+# BACKUP & ARCHIVE FILES
+# ========================================
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+*.save
+
+# Archive files
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+
+# ========================================
+# KEEP THESE FILES (NEEDED FOR SETUP)
+# ========================================
+# Configuration files
+!compose/*/docker-compose.yml
+!compose/*/env.example
+!config/*.yaml
+!config/*.yml
+!config/*.json
+
+# Scripts and documentation
+!scripts/**/*.sh
+!scripts/**/*.ps1
+!scripts/**/*.py
+!docs/**/*
+!*.md
+!*.txt
+
+# Project structure
+!compose/*/README.md
+!scripts/*/README.md
