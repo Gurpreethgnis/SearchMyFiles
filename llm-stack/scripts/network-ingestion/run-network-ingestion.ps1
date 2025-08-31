@@ -12,12 +12,21 @@
     The action to perform:
     - scan: Scan source directory and show document count
     - process: Process all documents from source to destination
+    - sample: Process a sample percentage of documents for testing
     - status: Show current processing status
     - config: Show current configuration
     - test: Test network connectivity and permissions
     
+.PARAMETER SamplePercentage
+    When using 'sample' action, specify the percentage of files to process (1-100)
+    
+.PARAMETER RandomSample
+    When using 'sample' action, use random sampling instead of sequential
+    
 .EXAMPLE
     .\run-network-ingestion.ps1 -Action scan
+    .\run-network-ingestion.ps1 -Action sample -SamplePercentage 20
+    .\run-network-ingestion.ps1 -Action sample -SamplePercentage 20 -RandomSample
     .\run-network-ingestion.ps1 -Action process
     .\run-network-ingestion.ps1 -Action status
     .\run-network-ingestion.ps1 -Action test
@@ -25,8 +34,15 @@
 
 param(
     [Parameter(Mandatory=$true)]
-    [ValidateSet("scan", "process", "status", "config", "test")]
-    [string]$Action
+    [ValidateSet("scan", "process", "sample", "status", "config", "test")]
+    [string]$Action,
+    
+    [Parameter(Mandatory=$false)]
+    [ValidateRange(1, 100)]
+    [int]$SamplePercentage = 20,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$RandomSample
 )
 
 # Configuration
@@ -38,14 +54,23 @@ $ScriptPath = "network_document_ingestion.py"
 function Show-Help {
     Write-Host "Network Document Ingestion System" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Usage: .\run-network-ingestion.ps1 -Action action" -ForegroundColor White
+    Write-Host "Usage: .\run-network-ingestion.ps1 -Action action [options]" -ForegroundColor White
     Write-Host ""
     Write-Host "Actions:" -ForegroundColor White
     Write-Host "  scan     - Scan source directory and show document count" -ForegroundColor White
+    Write-Host "  sample   - Process a sample percentage of documents for testing" -ForegroundColor White
     Write-Host "  process  - Process all documents from source to destination" -ForegroundColor White
     Write-Host "  status   - Show current processing status" -ForegroundColor White
     Write-Host "  config   - Show current configuration" -ForegroundColor White
     Write-Host "  test     - Test network connectivity and permissions" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Sample Mode Options:" -ForegroundColor White
+    Write-Host "  -SamplePercentage <1-100> - Percentage of files to process (default: 20)" -ForegroundColor White
+    Write-Host "  -RandomSample             - Use random sampling instead of sequential" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Examples:" -ForegroundColor White
+    Write-Host "  .\run-network-ingestion.ps1 -Action sample -SamplePercentage 20" -ForegroundColor Yellow
+    Write-Host "  .\run-network-ingestion.ps1 -Action sample -SamplePercentage 10 -RandomSample" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Network Paths:" -ForegroundColor White
     Write-Host "  Source: $SourcePath" -ForegroundColor Yellow
@@ -173,6 +198,9 @@ function Show-Configuration {
     Write-Host ""
     Write-Host "Processing Workers:" -ForegroundColor White
     Write-Host "  4 concurrent threads" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Sample Mode:" -ForegroundColor White
+    Write-Host "  Available for testing with percentage of files" -ForegroundColor Cyan
 }
 
 # Function to scan source directory
@@ -196,16 +224,23 @@ function Scan-SourceDirectory {
     return $true
 }
 
-# Function to process documents
-function Process-Documents {
-    Write-Host "Starting document processing..." -ForegroundColor Yellow
-    Write-Host "This will copy and organize all documents from source to destination" -ForegroundColor Cyan
+# Function to process sample documents
+function Process-SampleDocuments {
+    Write-Host "Starting sample document processing..." -ForegroundColor Yellow
+    Write-Host "This will process $SamplePercentage% of documents for testing" -ForegroundColor Cyan
+    
+    if ($RandomSample) {
+        Write-Host "Using random sampling for file selection" -ForegroundColor Cyan
+    } else {
+        Write-Host "Using sequential sampling (first $SamplePercentage% of files)" -ForegroundColor Cyan
+    }
+    
     Write-Host ""
     
     # Confirm with user
-    $confirmation = Read-Host "Do you want to proceed? (y/N)"
+    $confirmation = Read-Host "Do you want to proceed with sample processing? (y/N)"
     if ($confirmation -ne "y" -and $confirmation -ne "Y") {
-        Write-Host "Document processing cancelled by user" -ForegroundColor Yellow
+        Write-Host "Sample processing cancelled by user" -ForegroundColor Yellow
         return $false
     }
     
@@ -213,14 +248,53 @@ function Process-Documents {
         # Activate conda environment
         conda activate findfilesrag
         
-        # Run processing
-        Write-Host "Running document processing..." -ForegroundColor Green
-        python $ScriptPath
+        # Build command with sample parameters
+        $sampleCmd = "python $ScriptPath --sample-percentage $SamplePercentage"
+        if ($RandomSample) {
+            $sampleCmd += " --random-sample"
+        }
         
-        Write-Host "✓ Document processing completed" -ForegroundColor Green
+        # Run sample processing
+        Write-Host "Running sample document processing..." -ForegroundColor Green
+        Write-Host "Command: $sampleCmd" -ForegroundColor Gray
+        
+        Invoke-Expression $sampleCmd
+        
+        Write-Host "✓ Sample document processing completed" -ForegroundColor Green
         
     } catch {
-        Write-Host "✗ Failed to process documents: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "✗ Failed to process sample documents: $($_.Exception.Message)" -ForegroundColor Red
+        return $false
+    }
+    
+    return $true
+}
+
+# Function to process all documents
+function Process-AllDocuments {
+    Write-Host "Starting full document processing..." -ForegroundColor Yellow
+    Write-Host "This will copy and organize ALL documents from source to destination" -ForegroundColor Cyan
+    Write-Host ""
+    
+    # Confirm with user
+    $confirmation = Read-Host "Do you want to proceed with FULL processing? (y/N)"
+    if ($confirmation -ne "y" -and $confirmation -ne "Y") {
+        Write-Host "Full document processing cancelled by user" -ForegroundColor Yellow
+        return $false
+    }
+    
+    try {
+        # Activate conda environment
+        conda activate findfilesrag
+        
+        # Run full processing
+        Write-Host "Running full document processing..." -ForegroundColor Green
+        python $ScriptPath
+        
+        Write-Host "✓ Full document processing completed" -ForegroundColor Green
+        
+    } catch {
+        Write-Host "✗ Failed to process all documents: $($_.Exception.Message)" -ForegroundColor Red
         return $false
     }
     
@@ -253,9 +327,16 @@ function Show-ProcessingStatus {
                 Write-Host "  Index database: Not found" -ForegroundColor Yellow
             }
             
+            # Check for reports
+            $reportsPath = "$DestinationPath\reports"
+            if (Test-Path $reportsPath) {
+                $reportFiles = (Get-ChildItem -Path $reportsPath -Filter "*.json" | Measure-Object).Count
+                Write-Host "  Processing reports: $reportFiles" -ForegroundColor Cyan
+            }
+            
         } else {
             Write-Host "⚠ Destination directory does not exist yet" -ForegroundColor Yellow
-            Write-Host "  Run 'process' action to start document processing" -ForegroundColor Cyan
+            Write-Host "  Run 'sample' or 'process' action to start document processing" -ForegroundColor Cyan
         }
         
     } catch {
@@ -288,9 +369,17 @@ try {
                 exit 1
             }
         }
+        "sample" {
+            if (Test-NetworkConnectivity) {
+                Process-SampleDocuments
+            } else {
+                Write-Host "Network connectivity issues detected. Please check network access." -ForegroundColor Red
+                exit 1
+            }
+        }
         "process" {
             if (Test-NetworkConnectivity) {
-                Process-Documents
+                Process-AllDocuments
             } else {
                 Write-Host "Network connectivity issues detected. Please check network access." -ForegroundColor Red
                 exit 1
