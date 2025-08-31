@@ -169,6 +169,64 @@ yarn-error.log*
 *.7z
 
 # ========================================
+# LARGE BINARY FILES
+# ========================================
+# JAR files and other large binaries
+*.jar
+*.war
+*.ear
+*.exe
+*.msi
+*.dmg
+*.pkg
+*.deb
+*.rpm
+*.iso
+
+# Large media files (can be downloaded separately)
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.mkv
+*.webm
+*.m4v
+*.3gp
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+*.wma
+
+# Large image files
+*.psd
+*.ai
+*.eps
+*.indd
+*.sketch
+*.fig
+
+# ========================================
+# GENERATED & CACHE FILES
+# ========================================
+# Generated content
+generated/
+output/
+build/
+dist/
+target/
+bin/
+obj/
+
+# Cache directories
+.cache/
+cache/
+tmp/
+temp/
+
+# ========================================
 # KEEP THESE FILES (NEEDED FOR SETUP)
 # ========================================
 # Configuration files
