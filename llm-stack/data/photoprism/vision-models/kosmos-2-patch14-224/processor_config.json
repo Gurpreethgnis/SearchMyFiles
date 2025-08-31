@@ -1,0 +1,4 @@
+{
+  "num_patch_index_tokens": 1024,
+  "processor_class": "Kosmos2Processor"
+}

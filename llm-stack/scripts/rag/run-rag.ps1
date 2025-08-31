@@ -82,7 +82,7 @@ function Show-Help {
 function Build-RAGIndex {
     if (-not $InputFile) {
         Write-Host "❌ Error: Input file required for build-index action" -ForegroundColor Red
-        Write-Host "Use: .\run-rag.ps1 -Action build-index -InputFile <path>" -ForegroundColor Yellow
+        Write-Host "Use: .\run-rag.ps1 -Action build-index -InputFile path" -ForegroundColor Yellow
         exit 1
     }
     
@@ -234,7 +234,7 @@ print(f'Index size: {info[\"index_size_mb\"]} MB')
         
     } else {
         Write-Host "❌ RAG index not found: $OutputDir" -ForegroundColor Red
-        Write-Host "Build the index first with: .\run-rag.ps1 -Action build-index -InputFile <path>" -ForegroundColor Yellow
+        Write-Host "Build the index first with: .\run-rag.ps1 -Action build-index -InputFile path" -ForegroundColor Yellow
     }
 }
 

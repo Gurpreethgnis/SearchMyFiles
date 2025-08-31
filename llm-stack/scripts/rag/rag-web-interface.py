@@ -26,7 +26,14 @@ except ImportError as e:
 
 # RAG Components
 try:
-    from rag_search import RAGSearchEngine
+    import sys
+    import importlib.util
+    
+    # Import rag-search.py as a module
+    spec = importlib.util.spec_from_file_location("rag_search", "rag-search.py")
+    rag_search_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rag_search_module)
+    RAGSearchEngine = rag_search_module.RAGSearchEngine
 except ImportError:
     print("Error importing RAG search engine. Make sure rag-search.py is in the same directory.")
     sys.exit(1)

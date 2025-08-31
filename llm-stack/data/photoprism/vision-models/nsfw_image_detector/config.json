@@ -1,0 +1,48 @@
+{
+  "architecture": "eva02_base_patch14_448",
+  "architectures": [
+    "TimmWrapperForImageClassification"
+  ],
+  "do_pooling": true,
+  "global_pool": "avg",
+  "initializer_range": 0.02,
+  "label_names": [
+    "neutral",
+    "low",
+    "medium",
+    "high"
+  ],
+  "model_args": null,
+  "model_type": "timm_wrapper",
+  "num_classes": 4,
+  "num_features": 768,
+  "pretrained_cfg": {
+    "classifier": "head",
+    "crop_mode": "squash",
+    "crop_pct": 1.0,
+    "custom_load": false,
+    "first_conv": "patch_embed.proj",
+    "fixed_input_size": true,
+    "input_size": [
+      3,
+      448,
+      448
+    ],
+    "interpolation": "bicubic",
+    "license": "mit",
+    "mean": [
+      0.48145466,
+      0.4578275,
+      0.40821073
+    ],
+    "pool_size": null,
+    "std": [
+      0.26862954,
+      0.26130258,
+      0.27577711
+    ],
+    "tag": "mim_in22k_ft_in22k_in1k"
+  },
+  "torch_dtype": "float32",
+  "transformers_version": "4.53.2"
+}

@@ -1,0 +1,45 @@
+{
+  "architectures": [
+    "Kosmos2ForConditionalGeneration"
+  ],
+  "latent_query_num": 64,
+  "model_type": "kosmos-2",
+  "text_config": {
+    "activation_dropout": 0.0,
+    "activation_function": "gelu",
+    "attention_dropout": 0.1,
+    "attention_heads": 32,
+    "dropout": 0.1,
+    "embed_dim": 2048,
+    "ffn_dim": 8192,
+    "init_std": 0.02,
+    "layer_norm_eps": 1e-05,
+    "layerdrop": 0.0,
+    "layers": 24,
+    "max_position_embeddings": 2048,
+    "model_type": "kosmos_2_text_model",
+    "no_repeat_ngram_size": 3,
+    "scale_embedding": true,
+    "torch_dtype": "float32",
+    "use_cache": true,
+    "vocab_size": 65037
+  },
+  "torch_dtype": "float32",
+  "transformers_version": "4.53.2",
+  "vision_config": {
+    "attention_dropout": 0.0,
+    "hidden_act": "quick_gelu",
+    "hidden_size": 1024,
+    "image_size": 224,
+    "initializer_factor": 1.0,
+    "initializer_range": 0.02,
+    "intermediate_size": 4096,
+    "layer_norm_eps": 1e-05,
+    "model_type": "kosmos_2_vision_model",
+    "num_attention_heads": 16,
+    "num_channels": 3,
+    "num_hidden_layers": 24,
+    "patch_size": 14,
+    "torch_dtype": "float32"
+  }
+}

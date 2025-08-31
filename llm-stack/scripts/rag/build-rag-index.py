@@ -112,7 +112,10 @@ class RAGIndexBuilder:
             
             # Add tags
             if metadata.get("tags"):
-                content_parts.append(f"Tags: {', '.join(metadata['tags'])}")
+                if isinstance(metadata['tags'], list):
+                    content_parts.append(f"Tags: {', '.join(metadata['tags'])}")
+                else:
+                    content_parts.append(f"Tags: {metadata['tags']}")
             
             # Add correspondent (for documents)
             if metadata.get("correspondent"):
@@ -124,11 +127,17 @@ class RAGIndexBuilder:
             
             # Add labels (for photos)
             if metadata.get("labels"):
-                content_parts.append(f"Labels: {', '.join(metadata['labels'])}")
+                if isinstance(metadata['labels'], list):
+                    content_parts.append(f"Labels: {', '.join(metadata['labels'])}")
+                else:
+                    content_parts.append(f"Labels: {metadata['labels']}")
             
             # Add faces (for photos)
             if metadata.get("faces"):
-                content_parts.append(f"Faces: {', '.join(metadata['faces'])}")
+                if isinstance(metadata['faces'], list):
+                    content_parts.append(f"Faces: {', '.join(metadata['faces'])}")
+                else:
+                    content_parts.append(f"Faces: {metadata['faces']}")
             
             # Add location (for photos)
             if metadata.get("location", {}).get("place"):
@@ -151,32 +160,44 @@ class RAGIndexBuilder:
             
             # Common fields
             if doc_metadata.get("tags"):
-                metadata["tags"] = doc_metadata["tags"]
+                tags = doc_metadata["tags"]
+                if isinstance(tags, list):
+                    metadata["tags"] = ", ".join(tags)
+                else:
+                    metadata["tags"] = str(tags)
             
             if doc_metadata.get("file_size"):
-                metadata["file_size"] = doc_metadata["file_size"]
+                metadata["file_size"] = str(doc_metadata["file_size"])
             
             # Document-specific fields
             if doc["type"] == "document":
                 if doc_metadata.get("correspondent"):
-                    metadata["correspondent"] = doc_metadata["correspondent"]
+                    metadata["correspondent"] = str(doc_metadata["correspondent"])
                 if doc_metadata.get("document_type"):
-                    metadata["document_type"] = doc_metadata["document_type"]
+                    metadata["document_type"] = str(doc_metadata["document_type"])
                 if doc_metadata.get("page_count"):
-                    metadata["page_count"] = doc_metadata["page_count"]
+                    metadata["page_count"] = str(doc_metadata["page_count"])
                 if doc_metadata.get("language"):
-                    metadata["language"] = doc_metadata["language"]
+                    metadata["language"] = str(doc_metadata["language"])
             
             # Photo-specific fields
             elif doc["type"] == "photo":
                 if doc_metadata.get("labels"):
-                    metadata["labels"] = doc_metadata["labels"]
+                    labels = doc_metadata["labels"]
+                    if isinstance(labels, list):
+                        metadata["labels"] = ", ".join(labels)
+                    else:
+                        metadata["labels"] = str(labels)
                 if doc_metadata.get("faces"):
-                    metadata["faces"] = doc_metadata["faces"]
+                    faces = doc_metadata["faces"]
+                    if isinstance(faces, list):
+                        metadata["faces"] = ", ".join(faces)
+                    else:
+                        metadata["faces"] = str(faces)
                 if doc_metadata.get("camera"):
-                    metadata["camera"] = doc_metadata["camera"]
+                    metadata["camera"] = str(doc_metadata["camera"])
                 if doc_metadata.get("location", {}).get("place"):
-                    metadata["location"] = doc_metadata["location"]["place"]
+                    metadata["location"] = str(doc_metadata["location"]["place"])
         
         return metadata
     

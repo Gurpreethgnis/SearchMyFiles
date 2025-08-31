@@ -1,0 +1,14 @@
+{
+  "total_documents": 3,
+  "sources": {
+    "paperless": 2,
+    "photoprism": 1
+  },
+  "types": {
+    "document": 2,
+    "photo": 1
+  },
+  "indexed_at": "2025-08-31T04:07:07.848215",
+  "model_used": "all-MiniLM-L6-v2",
+  "index_size_mb": 16.2
+}
