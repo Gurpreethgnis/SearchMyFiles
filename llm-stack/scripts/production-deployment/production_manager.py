@@ -49,15 +49,15 @@ class ServiceConfig:
 class ServiceStatus:
     name: str
     status: str  # 'running', 'stopped', 'error', 'starting'
-    pid: Optional[int] = None
     port: int
     health_status: str
     uptime: float
     memory_usage: float
     cpu_usage: float
     restart_count: int
-    last_error: Optional[str] = None
     last_check: datetime
+    pid: Optional[int] = None
+    last_error: Optional[str] = None
 
 @dataclass
 class DeploymentMetrics:
